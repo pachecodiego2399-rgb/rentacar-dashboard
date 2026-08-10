@@ -161,7 +161,10 @@ export async function actualizarEstadoAuto(
 
   const fields: Record<string, unknown> = {
     Estado: OPCION_AIRTABLE_POR_ESTADO[estado],
-    "Fecha de devolución": estado === "Arrendado" ? fechaDevolucion : null,
+    // OJO: el campo en la base de Sierra Nevada está guardado como
+    // "Fecha de devolucion", sin tilde (igual que pasó con "Mantencion").
+    // Si se manda el nombre con tilde, Airtable responde UNKNOWN_FIELD_NAME.
+    "Fecha de devolucion": estado === "Arrendado" ? fechaDevolucion : null,
   };
 
   const res = await fetch(url, {
