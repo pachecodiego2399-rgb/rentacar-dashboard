@@ -5,9 +5,11 @@ import EstadoBadge from "./EstadoBadge";
 export default function StatusColumn({
   estado,
   autos,
+  onEstadoChange,
 }: {
   estado: EstadoAuto;
   autos: Auto[];
+  onEstadoChange: (id: string, nuevoEstado: EstadoAuto) => void;
 }) {
   return (
     <section className="flex min-w-0 flex-col rounded-xl bg-stone-200/50 p-3">
@@ -22,7 +24,7 @@ export default function StatusColumn({
       ) : (
         <div className="flex flex-col gap-3">
           {autos.map((auto) => (
-            <CarCard key={auto.id} auto={auto} />
+            <CarCard key={auto.id} auto={auto} onEstadoChange={onEstadoChange} />
           ))}
         </div>
       )}

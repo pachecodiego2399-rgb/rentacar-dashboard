@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Auto, AutosResponse, EstadoAuto } from "@/lib/types";
 import { ESTADOS } from "@/lib/estado";
+import { calcularResumen } from "@/lib/resumen";
 import SummaryBar from "./SummaryBar";
 import StatusColumn from "./StatusColumn";
 
@@ -37,6 +38,20 @@ export default function Dashboard() {
     const interval = setInterval(cargarAutos, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [cargarAutos]);
+
+  // Actualización optimista: ya confirmamos con Airtable que el cambio se
+  // guardó (CarCard hizo el PATCH), así que solo reflejamos el nuevo estado
+  // acá para reordenar la tarjeta a su columna sin esperar el próximo
+  // polling (hasta 20s).
+  const handleEstadoChange = useCallback((id: string, nuevoEstado: EstadoAuto) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const autos = prev.autos.map((a) =>
+        a.id === id ? { ...a, estado: nuevoEstado } : a
+      );
+      return { autos, resumen: calcularResumen(autos) };
+    });
+  }, []);
 
   if (estado === "cargando" && isFirstLoad.current) {
     return <DashboardSkeleton />;
@@ -80,7 +95,12 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {ESTADOS.map((e) => (
-          <StatusColumn key={e} estado={e} autos={autosPorEstado[e]} />
+          <StatusColumn
+            key={e}
+            estado={e}
+            autos={autosPorEstado[e]}
+            onEstadoChange={handleEstadoChange}
+          />
         ))}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import "server-only";
-import type { Auto, EstadoAuto, ResumenAutos } from "./types";
+import type { Auto, EstadoAuto } from "./types";
+import { calcularResumen } from "./resumen";
 
 /**
  * Cliente de Airtable. Este módulo SOLO debe importarse desde código
@@ -123,11 +124,34 @@ export async function fetchAutos(): Promise<Auto[]> {
   return registros.map(mapearRegistro);
 }
 
-export function calcularResumen(autos: Auto[]): ResumenAutos {
-  return {
-    total: autos.length,
-    disponibles: autos.filter((a) => a.estado === "Disponible").length,
-    arrendados: autos.filter((a) => a.estado === "Arrendado").length,
-    enMantencion: autos.filter((a) => a.estado === "Mantención").length,
-  };
+/**
+ * Actualiza el campo "Estado" de un auto puntual en Airtable (PATCH sobre
+ * un único registro). Requiere que el Personal Access Token configurado en
+ * AIRTABLE_API_KEY tenga el scope `data.records:write` además del de
+ * lectura — si el token es solo de lectura, Airtable responde 403 acá.
+ */
+export async function actualizarEstadoAuto(id: string, estado: EstadoAuto): Promise<Auto> {
+  const { apiKey, baseId, tableName } = getAirtableConfig();
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`;
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields: { Estado: estado } }),
+  });
+
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => "");
+    throw new Error(
+      `Airtable respondió ${res.status} ${res.statusText}. ${detalle}`.trim()
+    );
+  }
+
+  const record: AirtableRecord = await res.json();
+  return mapearRegistro(record);
 }
+
+export { calcularResumen };
