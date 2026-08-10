@@ -27,6 +27,10 @@ const OPCION_AIRTABLE_POR_ESTADO: Record<EstadoAuto, string> = {
   "Mantención": "Mantencion",
 };
 
+// Ídem para "Fecha de devolución": el campo real quedó guardado como
+// "Fecha de devolucion " (sin tilde, con un espacio final).
+const CAMPO_FECHA_DEVOLUCION = "Fecha de devolucion ";
+
 interface AirtableRecord {
   id: string;
   fields: Record<string, unknown>;
@@ -161,10 +165,12 @@ export async function actualizarEstadoAuto(
 
   const fields: Record<string, unknown> = {
     Estado: OPCION_AIRTABLE_POR_ESTADO[estado],
-    // OJO: el campo en la base de Sierra Nevada está guardado como
-    // "Fecha de devolucion", sin tilde (igual que pasó con "Mantencion").
-    // Si se manda el nombre con tilde, Airtable responde UNKNOWN_FIELD_NAME.
-    "Fecha de devolucion": estado === "Arrendado" ? fechaDevolucion : null,
+    // OJO: el nombre real de este campo en la base de Sierra Nevada es
+    // "Fecha de devolucion " — sin tilde en la "o" Y con un espacio al
+    // final (typo del creador de la base, invisible en la UI de Airtable).
+    // Cualquier variante distinta byte a byte (con tilde, sin el espacio
+    // final, etc.) hace que Airtable responda UNKNOWN_FIELD_NAME.
+    [CAMPO_FECHA_DEVOLUCION]: estado === "Arrendado" ? fechaDevolucion : null,
   };
 
   const res = await fetch(url, {
