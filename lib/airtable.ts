@@ -140,14 +140,29 @@ export async function fetchAutos(): Promise<Auto[]> {
 }
 
 /**
- * Actualiza el campo "Estado" de un auto puntual en Airtable (PATCH sobre
- * un único registro). Requiere que el Personal Access Token configurado en
- * AIRTABLE_API_KEY tenga el scope `data.records:write` además del de
- * lectura — si el token es solo de lectura, Airtable responde 403 acá.
+ * Actualiza el campo "Estado" (y opcionalmente "Fecha de devolución") de un
+ * auto puntual en Airtable (PATCH sobre un único registro). Requiere que el
+ * Personal Access Token configurado en AIRTABLE_API_KEY tenga el scope
+ * `data.records:write` además del de lectura — si el token es solo de
+ * lectura, Airtable responde 403 acá.
+ *
+ * La fecha de devolución solo tiene sentido mientras el auto está
+ * "Arrendado": si se pasa un valor y el estado es Arrendado, se guarda; en
+ * cualquier otro estado se limpia automáticamente, para que un auto que
+ * vuelve a estar Disponible no arrastre una fecha vieja en la tarjeta.
  */
-export async function actualizarEstadoAuto(id: string, estado: EstadoAuto): Promise<Auto> {
+export async function actualizarEstadoAuto(
+  id: string,
+  estado: EstadoAuto,
+  fechaDevolucion: string | null = null
+): Promise<Auto> {
   const { apiKey, baseId, tableName } = getAirtableConfig();
   const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`;
+
+  const fields: Record<string, unknown> = {
+    Estado: OPCION_AIRTABLE_POR_ESTADO[estado],
+    "Fecha de devolución": estado === "Arrendado" ? fechaDevolucion : null,
+  };
 
   const res = await fetch(url, {
     method: "PATCH",
@@ -155,7 +170,7 @@ export async function actualizarEstadoAuto(id: string, estado: EstadoAuto): Prom
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ fields: { Estado: OPCION_AIRTABLE_POR_ESTADO[estado] } }),
+    body: JSON.stringify({ fields }),
   });
 
   if (!res.ok) {

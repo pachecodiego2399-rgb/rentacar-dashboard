@@ -9,7 +9,7 @@ export default function StatusColumn({
 }: {
   estado: EstadoAuto;
   autos: Auto[];
-  onEstadoChange: (id: string, nuevoEstado: EstadoAuto) => void;
+  onEstadoChange: (id: string, nuevoEstado: EstadoAuto, nuevaFecha: string | null) => void;
 }) {
   return (
     <section className="flex min-w-0 flex-col rounded-xl bg-stone-200/50 p-3">

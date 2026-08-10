@@ -8,7 +8,7 @@ import EstadoBadge from "./EstadoBadge";
 
 interface Props {
   auto: Auto;
-  onEstadoChange: (id: string, nuevoEstado: EstadoAuto) => void;
+  onEstadoChange: (id: string, nuevoEstado: EstadoAuto, nuevaFecha: string | null) => void;
 }
 
 type Accion = "idle" | "guardando" | "ok" | "error";
@@ -23,14 +23,19 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
   const [accion, setAccion] = useState<Accion>("idle");
   const [estadoEnCurso, setEstadoEnCurso] = useState<EstadoAuto | null>(null);
 
-  async function cambiarEstado(nuevoEstado: EstadoAuto) {
+  // Formulario de fecha de devolución: se abre al marcar "Arrendado", o al
+  // tocar "Editar fecha" en un auto que ya está arrendado.
+  const [mostrarFormFecha, setMostrarFormFecha] = useState(false);
+  const [fechaForm, setFechaForm] = useState("");
+
+  async function cambiarEstado(nuevoEstado: EstadoAuto, fechaDevolucion: string | null) {
     setAccion("guardando");
     setEstadoEnCurso(nuevoEstado);
     try {
       const res = await fetch(`/api/autos/${auto.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estado: nuevoEstado }),
+        body: JSON.stringify({ estado: nuevoEstado, fechaDevolucion }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -38,11 +43,29 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
       }
       setAccion("ok");
       setEstadoEnCurso(null);
-      setTimeout(() => onEstadoChange(auto.id, nuevoEstado), RETRASO_REORDEN_MS);
+      setTimeout(
+        () => onEstadoChange(auto.id, nuevoEstado, fechaDevolucion),
+        RETRASO_REORDEN_MS
+      );
     } catch {
       setAccion("error");
       setEstadoEnCurso(null);
     }
+  }
+
+  function abrirFormFecha() {
+    setFechaForm(auto.fechaDevolucion ?? "");
+    setMostrarFormFecha(true);
+    setAccion("idle");
+  }
+
+  function cerrarFormFecha() {
+    setMostrarFormFecha(false);
+  }
+
+  function confirmarFormFecha() {
+    setMostrarFormFecha(false);
+    cambiarEstado("Arrendado", fechaForm || null);
   }
 
   const otrosEstados = ESTADOS.filter((e) => e !== auto.estado);
@@ -83,7 +106,18 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
         </p>
       )}
 
-      {accion === "ok" && (
+      {auto.estado === "Arrendado" && !mostrarFormFecha && (
+        <button
+          type="button"
+          onClick={abrirFormFecha}
+          disabled={guardando}
+          className="mt-2 text-sm font-semibold text-brand-primary underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {fecha ? "Editar fecha de devolución" : "Agregar fecha de devolución"}
+        </button>
+      )}
+
+      {accion === "ok" && !mostrarFormFecha && (
         <p className="mt-3 flex items-center gap-1.5 rounded-md bg-brand-forest/10 px-2.5 py-1.5 text-sm font-semibold text-brand-forest">
           <span aria-hidden="true">✓</span> Actualizado
         </p>
@@ -95,23 +129,59 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
         </p>
       )}
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        {otrosEstados.map((e) => {
-          const s = ESTADO_STYLES[e];
-          const cargandoEste = guardando && estadoEnCurso === e;
-          return (
+      {mostrarFormFecha ? (
+        <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
+          <label
+            htmlFor={`fecha-${auto.id}`}
+            className="block text-xs font-semibold uppercase tracking-wide text-stone-500"
+          >
+            Fecha de devolución (opcional)
+          </label>
+          <input
+            id={`fecha-${auto.id}`}
+            type="date"
+            value={fechaForm}
+            onChange={(e) => setFechaForm(e.target.value)}
+            className="mt-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900"
+          />
+          <div className="mt-3 flex gap-2">
             <button
-              key={e}
               type="button"
+              onClick={confirmarFormFecha}
               disabled={guardando}
-              onClick={() => cambiarEstado(e)}
-              className={`flex-1 rounded-lg px-4 py-3.5 text-base font-bold uppercase tracking-wide shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98] ${s.solidBg} ${s.solidText} hover:brightness-110`}
+              className="flex-1 rounded-lg bg-brand-primary px-4 py-3 text-base font-bold uppercase tracking-wide text-brand-accent shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {cargandoEste ? "Guardando..." : `Marcar ${s.label}`}
+              {guardando ? "Guardando..." : "Confirmar"}
             </button>
-          );
-        })}
-      </div>
+            <button
+              type="button"
+              onClick={cerrarFormFecha}
+              disabled={guardando}
+              className="rounded-lg border border-stone-300 px-4 py-3 text-base font-semibold text-stone-600 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {otrosEstados.map((e) => {
+            const s = ESTADO_STYLES[e];
+            const cargandoEste = guardando && estadoEnCurso === e;
+            return (
+              <button
+                key={e}
+                type="button"
+                disabled={guardando}
+                onClick={() => (e === "Arrendado" ? abrirFormFecha() : cambiarEstado(e, null))}
+                className={`flex-1 rounded-lg px-4 py-3.5 text-base font-bold uppercase tracking-wide shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98] ${s.solidBg} ${s.solidText} hover:brightness-110`}
+              >
+                {cargandoEste ? "Guardando..." : `Marcar ${s.label}`}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </article>
   );
 }

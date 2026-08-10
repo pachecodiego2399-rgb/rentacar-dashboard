@@ -43,15 +43,18 @@ export default function Dashboard() {
   // guardó (CarCard hizo el PATCH), así que solo reflejamos el nuevo estado
   // acá para reordenar la tarjeta a su columna sin esperar el próximo
   // polling (hasta 20s).
-  const handleEstadoChange = useCallback((id: string, nuevoEstado: EstadoAuto) => {
-    setData((prev) => {
-      if (!prev) return prev;
-      const autos = prev.autos.map((a) =>
-        a.id === id ? { ...a, estado: nuevoEstado } : a
-      );
-      return { autos, resumen: calcularResumen(autos) };
-    });
-  }, []);
+  const handleEstadoChange = useCallback(
+    (id: string, nuevoEstado: EstadoAuto, nuevaFecha: string | null) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        const autos = prev.autos.map((a) =>
+          a.id === id ? { ...a, estado: nuevoEstado, fechaDevolucion: nuevaFecha } : a
+        );
+        return { autos, resumen: calcularResumen(autos) };
+      });
+    },
+    []
+  );
 
   if (estado === "cargando" && isFirstLoad.current) {
     return <DashboardSkeleton />;
