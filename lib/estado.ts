@@ -22,9 +22,7 @@ export const ESTADO_STYLES: Record<EstadoAuto, EstadoStyle> = {
     dot: "bg-brand-forest",
     border: "border-l-brand-forest",
     solidBg: "bg-brand-forest",
-    // Texto oscuro: el verde "Disponible" es muy claro/brillante y el texto
-    // blanco no tenía suficiente contraste encima.
-    solidText: "text-stone-900",
+    solidText: "text-stone-50",
   },
   Arrendado: {
     label: "Arrendado",

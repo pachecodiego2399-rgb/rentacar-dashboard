@@ -12,6 +12,21 @@ import { calcularResumen } from "./resumen";
 
 const ESTADOS_VALIDOS: EstadoAuto[] = ["Disponible", "Arrendado", "Mantención"];
 
+/**
+ * Valor literal que hay que escribirle a Airtable para cada estado. En la
+ * UI mostramos siempre "Mantención" (con tilde), pero la opción de
+ * selección única ya creada en la base de Sierra Nevada quedó guardada
+ * como "Mantencion" (sin tilde). Si mandamos el valor con tilde, Airtable
+ * no la reconoce como una opción existente y rechaza el PATCH con
+ * INVALID_MULTIPLE_CHOICE_OPTIONS. Este mapeo evita tener que renombrar la
+ * opción en Airtable o cambiar el texto que ve Salvador en el dashboard.
+ */
+const OPCION_AIRTABLE_POR_ESTADO: Record<EstadoAuto, string> = {
+  Disponible: "Disponible",
+  Arrendado: "Arrendado",
+  "Mantención": "Mantencion",
+};
+
 interface AirtableRecord {
   id: string;
   fields: Record<string, unknown>;
@@ -140,7 +155,7 @@ export async function actualizarEstadoAuto(id: string, estado: EstadoAuto): Prom
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ fields: { Estado: estado } }),
+    body: JSON.stringify({ fields: { Estado: OPCION_AIRTABLE_POR_ESTADO[estado] } }),
   });
 
   if (!res.ok) {
