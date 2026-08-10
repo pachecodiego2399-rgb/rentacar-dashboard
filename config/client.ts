@@ -46,7 +46,7 @@ export const clientConfig: ClientConfig = {
   primaryColor: "#F2C230", // dorado
   secondaryColor: "#B8B8B8", // gris acero
   accentColor: "#1C1917", // carbón cálido
-  forestColor: "#3E5C4E", // verde bosque
+  forestColor: "#00FF37", // verde disponible (mas claro/brillante, a pedido del cliente)
 };
 
 // Plantilla genérica para el próximo cliente (comentada — descomentar y
