@@ -18,19 +18,30 @@ export default function Dashboard() {
   const isFirstLoad = useRef(true);
 
   const cargarAutos = useCallback(async () => {
-    try {
-      const res = await fetch("/api/autos", { cache: "no-store" });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Error al cargar los autos.");
-      setData(body as AutosResponse);
-      setEstado("listo");
-      setErrorMsg(null);
-    } catch (err) {
-      setEstado("error");
-      setErrorMsg(err instanceof Error ? err.message : "Error desconocido.");
-    } finally {
-      isFirstLoad.current = false;
+    // Reintento único y silencioso: la primera carga del día puede pegarle
+    // a una función de Vercel "fría" (plan gratuito) y demorar o fallar.
+    // Un segundo intento medio segundo después suele resolverlo antes de
+    // mostrarle cualquier error a Salvador.
+    for (let intento = 0; intento < 2; intento++) {
+      try {
+        const res = await fetch("/api/autos", { cache: "no-store" });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error ?? "Error al cargar los autos.");
+        setData(body as AutosResponse);
+        setEstado("listo");
+        setErrorMsg(null);
+        isFirstLoad.current = false;
+        return;
+      } catch (err) {
+        if (intento === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          continue;
+        }
+        setEstado("error");
+        setErrorMsg(err instanceof Error ? err.message : "Error desconocido.");
+      }
     }
+    isFirstLoad.current = false;
   }, []);
 
   useEffect(() => {

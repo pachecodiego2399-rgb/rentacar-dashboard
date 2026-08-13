@@ -31,12 +31,28 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
   async function cambiarEstado(nuevoEstado: EstadoAuto, fechaDevolucion: string | null) {
     setAccion("guardando");
     setEstadoEnCurso(nuevoEstado);
-    try {
-      const res = await fetch(`/api/autos/${auto.id}`, {
+
+    const intentarPatch = () =>
+      fetch(`/api/autos/${auto.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ estado: nuevoEstado, fechaDevolucion }),
       });
+
+    try {
+      let res: Response;
+      try {
+        res = await intentarPatch();
+        if (!res.ok) throw new Error("respuesta-no-ok");
+      } catch {
+        // Reintento único y silencioso: en el plan gratuito de Vercel la
+        // función puede estar "fría" tras un rato sin uso (o hay un hipo
+        // de red) y fallar el primer intento. Medio segundo después casi
+        // siempre funciona, sin que Salvador vea error ni tenga que tocar
+        // el botón de nuevo.
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        res = await intentarPatch();
+      }
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(body?.error ?? "No se pudo actualizar.");
