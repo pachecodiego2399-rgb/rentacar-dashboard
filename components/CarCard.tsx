@@ -111,10 +111,6 @@ export default function CarCard({ auto, onEstadoChange }: Props) {
         <span className="ml-1 text-xs font-normal text-stone-400">/ día</span>
       </p>
 
-      {auto.requisitos && (
-        <p className="mt-2 text-sm text-stone-500">{auto.requisitos}</p>
-      )}
-
       {fecha && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-stone-500">
           <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
