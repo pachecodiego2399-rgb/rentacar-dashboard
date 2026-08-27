@@ -77,3 +77,24 @@ polling/fetch state and splits `autos` into the three status columns, rendering 
 per status, each containing `CarCard`s. `CarCard` owns its own per-card save state (`idle` /
 `guardando` / `ok` / `error`) and, when marking a car "Arrendado", opens an inline date-picker form
 for the return date before firing the `PATCH`.
+
+**Clientes section (read-only)**: `app/clientes/page.tsx` mirrors the Autos page but for leads
+captured by the WhatsApp bot (Airtable table `Clientes`, configurable via
+`AIRTABLE_CLIENTES_TABLE_NAME`, default `"Clientes"`). Unlike Autos, this section is read-only —
+the AI agent changes a client's `Estado` (`En conversación` / `Calificado` / `Listo para retirar` /
+`Completado`) mid-conversation via an n8n Airtable Tool node, not Salvador from the dashboard, so
+there's no PATCH endpoint or write path here. `lib/airtable.ts` exports `fetchClientes()`
+alongside `fetchAutos()`, using the same API key/base but a separate table-name env var.
+`lib/estado-cliente.ts` mirrors `lib/estado.ts` (labels/colors per state, kept separate from Autos'
+`ESTADO_STYLES` because the state sets don't overlap). `components/Header.tsx` now renders
+`NavTabs` (client component, `usePathname`) to switch between `/` (Autos) and `/clientes`.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

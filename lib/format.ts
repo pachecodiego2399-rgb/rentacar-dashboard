@@ -28,3 +28,22 @@ export function formatearFecha(fecha: string | null): string | null {
     year: "numeric",
   }).format(date);
 }
+
+/**
+ * Para timestamps completos (con hora), a diferencia de `formatearFecha`.
+ * Se usa para el campo "Última actualización de estado" de un cliente, que
+ * en Airtable es un campo "Last Modified Time" con hora y zona horaria
+ * incluidas (no hace falta el ajuste manual de `formatearFecha`: al venir
+ * con hora y zona, `new Date(...)` lo interpreta bien en cualquier huso).
+ */
+export function formatearFechaHora(fecha: string | null): string | null {
+  if (!fecha) return null;
+  const date = new Date(fecha);
+  if (Number.isNaN(date.getTime())) return fecha;
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}

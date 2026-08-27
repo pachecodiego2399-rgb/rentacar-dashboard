@@ -1,6 +1,6 @@
 import "server-only";
-import type { Auto, EstadoAuto } from "./types";
-import { calcularResumen } from "./resumen";
+import type { Auto, Cliente, EstadoAuto, EstadoCliente } from "./types";
+import { calcularResumen, calcularResumenClientes } from "./resumen";
 
 /**
  * Cliente de Airtable. Este módulo SOLO debe importarse desde código
@@ -11,6 +11,14 @@ import { calcularResumen } from "./resumen";
  */
 
 const ESTADOS_VALIDOS: EstadoAuto[] = ["Disponible", "Arrendado", "Mantención"];
+
+const ESTADOS_CLIENTE_VALIDOS: EstadoCliente[] = [
+  "En conversación",
+  "Calificado",
+  "Listo para retirar",
+  "Necesita ayuda humana",
+  "Completado",
+];
 
 /**
  * Valor literal que hay que escribirle a Airtable para cada estado. En la
@@ -50,6 +58,27 @@ function getAirtableConfig() {
     throw new Error(
       "Faltan variables de entorno de Airtable. Revisá AIRTABLE_API_KEY, " +
         "AIRTABLE_BASE_ID y AIRTABLE_TABLE_NAME en tu .env.local (ver .env.example)."
+    );
+  }
+
+  return { apiKey, baseId, tableName };
+}
+
+/**
+ * Config para la tabla de Clientes (leads del bot de WhatsApp). Comparte
+ * API key y base con la tabla de Autos — solo cambia el nombre de tabla,
+ * configurable aparte porque Airtable no garantiza que todos los clientes
+ * la llamen igual. Por defecto es "Clientes".
+ */
+function getAirtableClientesConfig() {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const tableName = process.env.AIRTABLE_CLIENTES_TABLE_NAME || "Clientes";
+
+  if (!apiKey || !baseId) {
+    throw new Error(
+      "Faltan variables de entorno de Airtable. Revisá AIRTABLE_API_KEY y " +
+        "AIRTABLE_BASE_ID en tu .env.local (ver .env.example)."
     );
   }
 
@@ -193,4 +222,84 @@ export async function actualizarEstadoAuto(
   return mapearRegistro(record);
 }
 
-export { calcularResumen };
+// ─────────────────────────────────────────────────────────────────────────
+// Clientes (leads del bot de WhatsApp)
+// ─────────────────────────────────────────────────────────────────────────
+
+function normalizarEstadoCliente(estado: unknown): EstadoCliente {
+  const valor = typeof estado === "string" ? normalizarClave(estado) : "";
+  const match = ESTADOS_CLIENTE_VALIDOS.find((e) => normalizarClave(e) === valor);
+  // Un cliente recién creado por el bot puede no tener Estado seteado
+  // todavía (la IA solo lo marca al calificarlo) — lo tratamos como
+  // "En conversación", que es literalmente lo que está pasando.
+  return match ?? "En conversación";
+}
+
+function normalizarTarjetaCredito(valor: unknown): boolean | null {
+  if (typeof valor !== "string") return null;
+  const v = normalizarClave(valor);
+  if (v === "si" || v === "sí") return true;
+  if (v === "no") return false;
+  return null;
+}
+
+function mapearClienteRecord(record: AirtableRecord): Cliente {
+  const f = record.fields;
+  const nombre = getCampo(f, "Nombre");
+  const telefono = getCampo(f, "Teléfono");
+  const autoDeInteres = getCampo(f, "Auto de interés");
+  const fechaContacto = getCampo(f, "Fecha de contacto");
+  const ultimaActualizacion = getCampo(f, "Última actualización de estado");
+
+  return {
+    id: record.id,
+    nombre: typeof nombre === "string" && nombre.trim() ? nombre.trim() : "Sin nombre",
+    telefono: typeof telefono === "string" && telefono.trim() ? telefono.trim() : "—",
+    estado: normalizarEstadoCliente(getCampo(f, "Estado")),
+    autoDeInteres: typeof autoDeInteres === "string" ? autoDeInteres.trim() : "",
+    tarjetaDeCredito: normalizarTarjetaCredito(getCampo(f, "Tarjeta de crédito")),
+    fechaContacto: typeof fechaContacto === "string" ? fechaContacto : null,
+    ultimaActualizacion:
+      typeof ultimaActualizacion === "string" ? ultimaActualizacion : null,
+  };
+}
+
+/**
+ * Trae todos los clientes (leads) de la tabla Clientes, paginando si hace
+ * falta. Solo lectura: a diferencia de los autos, el estado del cliente lo
+ * cambia el agente de IA durante la conversación de WhatsApp, no Salvador
+ * desde el dashboard — acá solo se muestra para que Salvador tenga
+ * visibilidad de en qué va cada lead.
+ */
+export async function fetchClientes(): Promise<Cliente[]> {
+  const { apiKey, baseId, tableName } = getAirtableClientesConfig();
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`;
+
+  const registros: AirtableRecord[] = [];
+  let offset: string | undefined;
+
+  do {
+    const query = new URLSearchParams({ pageSize: "100" });
+    if (offset) query.set("offset", offset);
+
+    const res = await fetch(`${url}?${query.toString()}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      next: { revalidate: 20 },
+    });
+
+    if (!res.ok) {
+      const detalle = await res.text().catch(() => "");
+      throw new Error(
+        `Airtable respondió ${res.status} ${res.statusText}. ${detalle}`.trim()
+      );
+    }
+
+    const data: AirtableListResponse = await res.json();
+    registros.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+
+  return registros.map(mapearClienteRecord);
+}
+
+export { calcularResumen, calcularResumenClientes };
