@@ -51,6 +51,10 @@ export interface Cliente {
   fechaContacto: string | null;
   /** Timestamp ISO de la última vez que cambió el campo Estado */
   ultimaActualizacion: string | null;
+  /** Historial de mensajes en texto plano, tal como lo guarda el bot */
+  conversacion: string;
+  /** true = el bot está pausado y Salvador responde manualmente */
+  pausado: boolean;
 }
 
 export interface ResumenClientes {

@@ -3,7 +3,13 @@ import { ESTADO_CLIENTE_STYLES } from "@/lib/estado-cliente";
 import { formatearFecha, formatearFechaHora } from "@/lib/format";
 import EstadoClienteBadge from "./EstadoClienteBadge";
 
-export default function ClienteCard({ cliente }: { cliente: Cliente }) {
+export default function ClienteCard({
+  cliente,
+  onOpen,
+}: {
+  cliente: Cliente;
+  onOpen?: (cliente: Cliente) => void;
+}) {
   const style = ESTADO_CLIENTE_STYLES[cliente.estado];
   const fechaContacto = formatearFecha(cliente.fechaContacto);
   const ultimaActualizacion = formatearFechaHora(cliente.ultimaActualizacion);
@@ -17,7 +23,10 @@ export default function ClienteCard({ cliente }: { cliente: Cliente }) {
 
   return (
     <article
-      className={`rounded-lg border border-l-4 border-stone-200 bg-white p-4 shadow-sm transition hover:shadow-md ${style.border}`}
+      onClick={() => onOpen?.(cliente)}
+      className={`cursor-pointer rounded-lg border border-l-4 border-stone-200 bg-white p-4 shadow-sm transition hover:shadow-md ${style.border} ${
+        cliente.pausado ? "ring-2 ring-[#b8791a]" : ""
+      }`}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 break-words font-display text-lg font-bold uppercase tracking-wide text-stone-900">
@@ -34,6 +43,7 @@ export default function ClienteCard({ cliente }: { cliente: Cliente }) {
           href={linkWhatsapp}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="mt-3 inline-block font-mono text-sm text-brand-primary underline underline-offset-2"
         >
           {cliente.telefono}

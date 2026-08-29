@@ -250,6 +250,7 @@ function mapearClienteRecord(record: AirtableRecord): Cliente {
   const autoDeInteres = getCampo(f, "Auto de interés");
   const fechaContacto = getCampo(f, "Fecha de contacto");
   const ultimaActualizacion = getCampo(f, "Última actualización de estado");
+  const conversacion = getCampo(f, "Conversación");
 
   return {
     id: record.id,
@@ -261,6 +262,8 @@ function mapearClienteRecord(record: AirtableRecord): Cliente {
     fechaContacto: typeof fechaContacto === "string" ? fechaContacto : null,
     ultimaActualizacion:
       typeof ultimaActualizacion === "string" ? ultimaActualizacion : null,
+    conversacion: typeof conversacion === "string" ? conversacion : "",
+    pausado: getCampo(f, "Pausado") === true,
   };
 }
 
@@ -284,7 +287,12 @@ export async function fetchClientes(): Promise<Cliente[]> {
 
     const res = await fetch(`${url}?${query.toString()}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
-      next: { revalidate: 20 },
+      // A diferencia de Autos, acá el dashboard escribe (Pausado) y necesita
+      // ver ese cambio de inmediato — con revalidate:20 un poll que cae justo
+      // después de un PATCH puede servir una respuesta cacheada vieja y
+      // "revertir" visualmente el toggle aunque Airtable ya haya guardado el
+      // valor correcto. cache:"no-store" evita esa carrera.
+      cache: "no-store",
     });
 
     if (!res.ok) {
@@ -300,6 +308,40 @@ export async function fetchClientes(): Promise<Cliente[]> {
   } while (offset);
 
   return registros.map(mapearClienteRecord);
+}
+
+/**
+ * Actualiza el campo "Pausado" de un cliente puntual en Airtable. Se usa
+ * desde el botón "Pausar bot" / "Reanudar bot" del dashboard, y desde el
+ * webhook de n8n al recibir un mensaje manual (que además marca Pausado en
+ * true del lado del workflow). Requiere que AIRTABLE_API_KEY tenga permiso
+ * de escritura, igual que actualizarEstadoAuto.
+ */
+export async function actualizarPausadoCliente(
+  id: string,
+  pausado: boolean
+): Promise<Cliente> {
+  const { apiKey, baseId, tableName } = getAirtableClientesConfig();
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`;
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields: { Pausado: pausado } }),
+  });
+
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => "");
+    throw new Error(
+      `Airtable respondió ${res.status} ${res.statusText}. ${detalle}`.trim()
+    );
+  }
+
+  const record: AirtableRecord = await res.json();
+  return mapearClienteRecord(record);
 }
 
 export { calcularResumen, calcularResumenClientes };

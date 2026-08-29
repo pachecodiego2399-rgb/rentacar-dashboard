@@ -5,9 +5,11 @@ import EstadoClienteBadge from "./EstadoClienteBadge";
 export default function ClienteStatusColumn({
   estado,
   clientes,
+  onOpenCliente,
 }: {
   estado: EstadoCliente;
   clientes: Cliente[];
+  onOpenCliente?: (cliente: Cliente) => void;
 }) {
   return (
     <section className="flex min-w-0 flex-col rounded-xl bg-stone-200/50 p-3">
@@ -22,7 +24,7 @@ export default function ClienteStatusColumn({
       ) : (
         <div className="flex flex-col gap-3">
           {clientes.map((cliente) => (
-            <ClienteCard key={cliente.id} cliente={cliente} />
+            <ClienteCard key={cliente.id} cliente={cliente} onOpen={onOpenCliente} />
           ))}
         </div>
       )}
