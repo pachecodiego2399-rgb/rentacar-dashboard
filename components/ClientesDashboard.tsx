@@ -1,11 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import type { Cliente, ClientesResponse, EstadoCliente } from "@/lib/types";
 import { ESTADOS_CLIENTE } from "@/lib/estado-cliente";
 import ClientesSummaryBar from "./ClientesSummaryBar";
 import ClienteStatusColumn from "./ClienteStatusColumn";
 import ConversacionCliente from "./ConversacionCliente";
+import ClienteCard from "./ClienteCard";
 
 const POLL_INTERVAL_MS = 20_000;
 
@@ -25,6 +35,10 @@ export default function ClientesDashboard() {
   // drop en el dashboard demo para no revertir visualmente una acción que
   // en realidad ya se guardó bien.
   const suppressPollRef = useRef(false);
+  const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
+  // Mismo criterio que el dashboard demo: el arrastre recién empieza después
+  // de mover el mouse 6px, así un clic normal sigue abriendo la conversación.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function mostrarToast(message: string) {
     setToast(message);
@@ -171,6 +185,24 @@ export default function ClientesDashboard() {
     clientesPorEstado[cliente.estado].push(cliente);
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setArrastrandoId(String(event.active.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setArrastrandoId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const nuevoEstado = over.id as EstadoCliente;
+    const cliente = data?.clientes.find((c) => c.id === active.id);
+    if (!cliente || cliente.estado === nuevoEstado) return;
+    void handleCambiarEstado(cliente.id, nuevoEstado);
+  }
+
+  const clienteArrastrado = arrastrandoId
+    ? data.clientes.find((c) => c.id === arrastrandoId) ?? null
+    : null;
+
   const detailCliente = detailClienteId
     ? data.clientes.find((c) => c.id === detailClienteId) ?? null
     : null;
@@ -191,17 +223,31 @@ export default function ClientesDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {ESTADOS_CLIENTE.map((e) => (
-          <ClienteStatusColumn
-            key={e}
-            estado={e}
-            clientes={clientesPorEstado[e]}
-            onOpenCliente={(cliente) => setDetailClienteId(cliente.id)}
-            onCambiarEstado={handleCambiarEstado}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setArrastrandoId(null)}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {ESTADOS_CLIENTE.map((e) => (
+            <ClienteStatusColumn
+              key={e}
+              estado={e}
+              clientes={clientesPorEstado[e]}
+              onOpenCliente={(cliente) => setDetailClienteId(cliente.id)}
+              onCambiarEstado={handleCambiarEstado}
+            />
+          ))}
+        </div>
+        <DragOverlay>
+          {clienteArrastrado ? (
+            <div className="cursor-grabbing rotate-1 shadow-xl">
+              <ClienteCard cliente={clienteArrastrado} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {detailCliente ? (
         <ConversacionCliente

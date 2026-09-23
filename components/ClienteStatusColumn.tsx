@@ -1,3 +1,6 @@
+"use client";
+
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { Cliente, EstadoCliente } from "@/lib/types";
 import ClienteCard from "./ClienteCard";
 import EstadoClienteBadge from "./EstadoClienteBadge";
@@ -13,8 +16,17 @@ export default function ClienteStatusColumn({
   onOpenCliente?: (cliente: Cliente) => void;
   onCambiarEstado?: (id: string, nuevoEstado: EstadoCliente) => Promise<void>;
 }) {
+  // Cada columna es una zona donde se puede soltar una tarjeta: el id del
+  // droppable es el Estado, así onDragEnd sabe a qué estado mover al cliente.
+  const { setNodeRef, isOver } = useDroppable({ id: estado });
+
   return (
-    <section className="flex min-w-0 flex-col rounded-xl bg-stone-200/50 p-3">
+    <section
+      ref={setNodeRef}
+      className={`flex min-w-0 flex-col rounded-xl border-2 border-dashed p-3 transition-colors ${
+        isOver ? "border-[#b8791a] bg-amber-50" : "border-transparent bg-stone-200/50"
+      }`}
+    >
       <header className="mb-3 px-1">
         <EstadoClienteBadge estado={estado} size="lg" count={clientes.length} />
       </header>
@@ -26,7 +38,7 @@ export default function ClienteStatusColumn({
       ) : (
         <div className="flex flex-col gap-3">
           {clientes.map((cliente) => (
-            <ClienteCard
+            <ClienteArrastrable
               key={cliente.id}
               cliente={cliente}
               onOpen={onOpenCliente}
@@ -36,5 +48,31 @@ export default function ClienteStatusColumn({
         </div>
       )}
     </section>
+  );
+}
+
+function ClienteArrastrable({
+  cliente,
+  onOpen,
+  onCambiarEstado,
+}: {
+  cliente: Cliente;
+  onOpen?: (cliente: Cliente) => void;
+  onCambiarEstado?: (id: string, nuevoEstado: EstadoCliente) => Promise<void>;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: cliente.id,
+    data: { estado: cliente.estado },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""}`}
+    >
+      <ClienteCard cliente={cliente} onOpen={onOpen} onCambiarEstado={onCambiarEstado} />
+    </div>
   );
 }
