@@ -138,7 +138,7 @@ export default function ConversacionCliente({
             className="flex-1 rounded px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
             style={{ background: cliente.pausado ? "#2e7d32" : "#b8791a" }}
           >
-            {pausando ? "Guardando…" : cliente.pausado ? "Reanudar bot" : "Pausar bot"}
+            {pausando ? "Guardando…" : cliente.pausado ? "Reanudar agente" : "Pausar agente"}
           </button>
           <button
             type="button"

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { actualizarPausadoCliente } from "@/lib/airtable";
+import { actualizarEstadoCliente, actualizarPausadoCliente } from "@/lib/airtable";
+import { ESTADOS_CLIENTE } from "@/lib/estado-cliente";
+import type { EstadoCliente } from "@/lib/types";
 
 /**
  * PATCH /api/clientes/:id
- * Body: { pausado: boolean }
+ * Body: { pausado: boolean } o { estado: EstadoCliente }
  *
- * Actualiza el campo "Pausado" de un cliente puntual en Airtable. Server-side
+ * Actualiza el campo "Pausado" o el "Estado" de un cliente puntual en Airtable. Server-side
  * only: el API Key de Airtable nunca sale de acá (ver lib/airtable.ts).
  */
 export async function PATCH(
@@ -28,17 +30,28 @@ export async function PATCH(
     );
   }
 
-  const { pausado } = (body as { pausado?: unknown } | null) ?? {};
+  const { pausado, estado } =
+    (body as { pausado?: unknown; estado?: unknown } | null) ?? {};
 
-  if (typeof pausado !== "boolean") {
+  const estadoValido =
+    typeof estado === "string" && ESTADOS_CLIENTE.includes(estado as EstadoCliente);
+
+  if (typeof pausado !== "boolean" && !estadoValido) {
     return NextResponse.json(
-      { error: "El campo 'pausado' debe ser true o false." },
+      {
+        error:
+          "Envía 'pausado' (true o false) o 'estado' (uno de: " +
+          ESTADOS_CLIENTE.join(", ") +
+          ").",
+      },
       { status: 400 }
     );
   }
 
   try {
-    const cliente = await actualizarPausadoCliente(id, pausado);
+    const cliente = estadoValido
+      ? await actualizarEstadoCliente(id, estado as EstadoCliente)
+      : await actualizarPausadoCliente(id, pausado as boolean);
     return NextResponse.json({ cliente });
   } catch (error) {
     console.error("[PATCH /api/clientes/:id]", error);

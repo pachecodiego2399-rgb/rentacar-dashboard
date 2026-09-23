@@ -345,3 +345,40 @@ export async function actualizarPausadoCliente(
 }
 
 export { calcularResumen, calcularResumenClientes };
+
+/**
+ * Cambia el "Estado" de un cliente puntual en Airtable (PATCH de un solo
+ * registro). Al cambiar el Estado se actualiza "Última actualización de
+ * reserva", así que si el nuevo estado es "Listo para retirar" o
+ * "Necesita ayuda humana", el agente de n8n dispara los avisos igual que si
+ * lo hubiera cambiado él.
+ */
+export async function actualizarEstadoCliente(
+  id: string,
+  estado: EstadoCliente
+): Promise<Cliente> {
+  if (!ESTADOS_CLIENTE_VALIDOS.includes(estado)) {
+    throw new Error(`Estado de cliente inválido: ${estado}`);
+  }
+  const { apiKey, baseId, tableName } = getAirtableClientesConfig();
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`;
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields: { Estado: estado } }),
+  });
+
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => "");
+    throw new Error(
+      `Airtable respondió ${res.status} ${res.statusText}. ${detalle}`.trim()
+    );
+  }
+
+  const record: AirtableRecord = await res.json();
+  return mapearClienteRecord(record);
+}

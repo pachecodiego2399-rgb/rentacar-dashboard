@@ -1,15 +1,38 @@
-import type { Cliente } from "@/lib/types";
-import { ESTADO_CLIENTE_STYLES } from "@/lib/estado-cliente";
+"use client";
+
+import { useState } from "react";
+import type { Cliente, EstadoCliente } from "@/lib/types";
+import { ESTADOS_CLIENTE, ESTADO_CLIENTE_STYLES } from "@/lib/estado-cliente";
 import { formatearFecha, formatearFechaHora } from "@/lib/format";
 import EstadoClienteBadge from "./EstadoClienteBadge";
 
 export default function ClienteCard({
   cliente,
   onOpen,
+  onCambiarEstado,
 }: {
   cliente: Cliente;
   onOpen?: (cliente: Cliente) => void;
+  onCambiarEstado?: (id: string, nuevoEstado: EstadoCliente) => Promise<void>;
 }) {
+  const [moviendo, setMoviendo] = useState(false);
+  const [estadoEnCurso, setEstadoEnCurso] = useState<EstadoCliente | null>(null);
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const otrosEstados = ESTADOS_CLIENTE.filter((e) => e !== cliente.estado);
+
+  async function mover(nuevoEstado: EstadoCliente) {
+    if (!onCambiarEstado) return;
+    setMoviendo(true);
+    setEstadoEnCurso(nuevoEstado);
+    try {
+      await onCambiarEstado(cliente.id, nuevoEstado);
+      setMenuAbierto(false);
+    } finally {
+      setMoviendo(false);
+      setEstadoEnCurso(null);
+    }
+  }
+
   const style = ESTADO_CLIENTE_STYLES[cliente.estado];
   const fechaContacto = formatearFecha(cliente.fechaContacto);
   const ultimaActualizacion = formatearFechaHora(cliente.ultimaActualizacion);
@@ -79,6 +102,48 @@ export default function ClienteCard({
         <p className="mt-1 text-xs text-stone-400">
           Última actualización: {ultimaActualizacion}
         </p>
+      )}
+
+      {onCambiarEstado && (
+        <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+          {menuAbierto ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Mover a
+              </p>
+              {otrosEstados.map((e) => {
+                const s = ESTADO_CLIENTE_STYLES[e];
+                return (
+                  <button
+                    key={e}
+                    type="button"
+                    disabled={moviendo}
+                    onClick={() => mover(e)}
+                    className={`rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-wide shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98] ${s.solidBg} ${s.solidText} hover:brightness-110`}
+                  >
+                    {moviendo && estadoEnCurso === e ? "Guardando..." : s.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                disabled={moviendo}
+                onClick={() => setMenuAbierto(false)}
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMenuAbierto(true)}
+              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+            >
+              Cambiar estado
+            </button>
+          )}
+        </div>
       )}
     </article>
   );

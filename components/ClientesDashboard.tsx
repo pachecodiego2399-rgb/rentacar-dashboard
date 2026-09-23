@@ -114,6 +114,38 @@ export default function ClientesDashboard() {
     }
   }
 
+  async function handleCambiarEstado(id: string, nuevoEstado: EstadoCliente) {
+    suppressPollRef.current = true;
+    const previous = data;
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            clientes: current.clientes.map((c) =>
+              c.id === id ? { ...c, estado: nuevoEstado } : c
+            ),
+          }
+        : current
+    );
+    try {
+      const res = await fetch(`/api/clientes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: nuevoEstado }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Error al cambiar el estado del cliente");
+    } catch (err) {
+      setData(previous);
+      mostrarToast(
+        `No se pudo cambiar el estado: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      suppressPollRef.current = false;
+    }
+    await cargarClientes();
+  }
+
   async function handleMessageSent(id: string) {
     suppressPollRef.current = true;
     setData((current) =>
@@ -166,6 +198,7 @@ export default function ClientesDashboard() {
             estado={e}
             clientes={clientesPorEstado[e]}
             onOpenCliente={(cliente) => setDetailClienteId(cliente.id)}
+            onCambiarEstado={handleCambiarEstado}
           />
         ))}
       </div>
