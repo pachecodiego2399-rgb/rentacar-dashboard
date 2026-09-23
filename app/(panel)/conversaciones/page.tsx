@@ -35,6 +35,7 @@ function Conversaciones() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [verFicha, setVerFicha] = useState(false);
 
   const lista = useMemo(
     () =>
@@ -55,7 +56,7 @@ function Conversaciones() {
     <div className="flex flex-col gap-5">
       <Encabezado titulo="Conversaciones" bajada="Todo lo que se habló por WhatsApp, y lo que se sabe de cada cliente." />
 
-      <div className="grid overflow-hidden rounded-2xl border border-n-line bg-n-card/60 lg:h-[calc(100vh-210px)] lg:min-h-[600px] lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_320px]">
+      <div className="grid overflow-hidden rounded-2xl border border-n-line bg-n-card/60 lg:h-[calc(100vh-210px)] lg:min-h-[600px] lg:grid-cols-[290px_1fr] 2xl:grid-cols-[310px_1fr_320px]">
         {/* Lista */}
         <aside className="flex min-h-0 flex-col border-b border-n-line lg:border-b-0 lg:border-r">
           <div className="flex flex-col gap-2 border-b border-n-line p-3">
@@ -123,16 +124,36 @@ function Conversaciones() {
         </aside>
 
         {/* Chat */}
-        {seleccionado ? <Chat cliente={seleccionado} /> : <div className="flex items-center justify-center p-10 text-n-faint">Elige una conversación</div>}
+        {seleccionado ? <Chat cliente={seleccionado} onFicha={() => setVerFicha(true)} /> : <div className="flex items-center justify-center p-10 text-n-faint">Elige una conversación</div>}
 
         {/* Ficha */}
-        {seleccionado && <Ficha cliente={seleccionado} />}
+        {seleccionado && (
+          <div className="hidden min-h-0 border-l border-n-line 2xl:flex">
+            <Ficha cliente={seleccionado} />
+          </div>
+        )}
       </div>
+
+      {/* En pantallas de notebook la ficha se abre como panel lateral */}
+      {seleccionado && verFicha && (
+        <div className="fixed inset-0 z-40 2xl:hidden">
+          <button aria-label="Cerrar ficha" onClick={() => setVerFicha(false)} className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-y-0 right-0 flex w-[min(360px,100%)] flex-col border-l border-n-line2 bg-n-side shadow-2xl">
+            <div className="flex items-center justify-between border-b border-n-line px-5 py-3">
+              <span className="text-[14px] font-semibold text-n-fg">Ficha del cliente</span>
+              <button onClick={() => setVerFicha(false)} aria-label="Cerrar" className="text-n-faint hover:text-n-fg">
+                <Icono nombre="cerrar" className="h-4 w-4" />
+              </button>
+            </div>
+            <Ficha cliente={seleccionado} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Chat({ cliente }: { cliente: Cliente }) {
+function Chat({ cliente, onFicha }: { cliente: Cliente; onFicha: () => void }) {
   const { cambiarPausado, enviarMensaje } = useDatos();
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -167,19 +188,25 @@ function Chat({ cliente }: { cliente: Cliente }) {
 
   return (
     <section className="flex min-h-[520px] min-w-0 flex-col lg:min-h-0">
-      <header className="flex items-center gap-3 border-b border-n-line px-5 py-3">
+      <header className="flex flex-wrap items-center gap-3 border-b border-n-line px-4 py-3 sm:flex-nowrap sm:px-5">
         <Avatar texto={iniciales(cliente.nombre)} color={COLOR_ESTADO_CLIENTE[cliente.estado]} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-[15px] font-semibold text-n-fg">{cliente.nombre}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[15px] font-semibold text-n-fg">{cliente.nombre}</span>
             <PillCliente estado={cliente.estado} />
           </div>
-          <div className="text-[12.5px] tabular-nums text-n-faint">{formatearTelefono(cliente.telefono)}</div>
+          <div className="mt-0.5 whitespace-nowrap text-[12.5px] tabular-nums text-n-faint">{formatearTelefono(cliente.telefono)}</div>
         </div>
+        <button
+          onClick={onFicha}
+          className="shrink-0 rounded-lg border border-n-line2 px-3 py-2 text-[13px] text-n-muted transition hover:text-n-fg 2xl:hidden"
+        >
+          Ficha
+        </button>
         <button
           onClick={alternarControl}
           disabled={cambiando}
-          className={`shrink-0 rounded-lg border px-3.5 py-2 text-[13px] font-medium transition disabled:opacity-60 ${
+          className={`flex-1 shrink-0 rounded-lg border px-3.5 py-2 text-[13px] font-medium transition disabled:opacity-60 sm:flex-none ${
             cliente.pausado
               ? "border-n-acc/50 bg-n-acc/15 text-n-fg hover:bg-n-acc/25"
               : "border-n-line2 bg-n-card2 text-n-fg hover:border-n-warn/50"
@@ -289,7 +316,7 @@ function Ficha({ cliente }: { cliente: Cliente }) {
   const retiro = cliente.fechaRetiro ? formatoCorto(fechaLocal(cliente.fechaRetiro, cliente.horaRetiro), !!cliente.horaRetiro) : null;
 
   return (
-    <aside className="hidden min-h-0 flex-col gap-5 overflow-y-auto border-l border-n-line p-5 xl:flex">
+    <aside className="flex min-h-0 w-full flex-col gap-5 overflow-y-auto p-5">
       <div className="flex items-center gap-3">
         <span
           title="El puntaje de cada cliente llega en una próxima versión del agente."
