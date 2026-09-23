@@ -32,6 +32,16 @@ export interface ClientConfig {
   accentColor: string;
   /** Segundo acento de marca (estado "Disponible", detalles de entorno) */
   forestColor: string;
+  /** Nombre corto que se muestra en la barra lateral (ej: "Sierra Nevada") */
+  shortName: string;
+  /** Rubro, se muestra junto al nombre corto (ej: "Rentacar") */
+  businessType: string;
+  /** Nombre y rol de quien usa el panel (el dueño) */
+  ownerName: string;
+  ownerRole: string;
+  /** Horario de atención humano (hora 0-23), para medir "fuera de horario" */
+  openingHour: number;
+  closingHour: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -47,6 +57,12 @@ export const clientConfig: ClientConfig = {
   secondaryColor: "#B8B8B8", // gris acero
   accentColor: "#1C1917", // carbón cálido
   forestColor: "#008000", // verde disponible (ajustado, mas suave que el neon inicial)
+  shortName: "Sierra Nevada",
+  businessType: "Rentacar",
+  ownerName: "Salvador",
+  ownerRole: "Dueño",
+  openingHour: 9,
+  closingHour: 18,
 };
 
 // Plantilla genérica para el próximo cliente (comentada — descomentar y

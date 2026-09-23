@@ -123,6 +123,15 @@ function mapearRegistro(record: AirtableRecord): Auto {
   const precio = getCampo(f, "Precio por día");
   const requisitos = getCampo(f, "Requisitos");
   const fechaDevolucion = getCampo(f, "Fecha de devolución");
+  const anio = getCampo(f, "Año");
+  const caja = getCampo(f, "Caja");
+  const traccion = getCampo(f, "Traccion");
+  const fotos = getCampo(f, "Foto") as
+    | Array<{ url?: string; thumbnails?: { large?: { url?: string } } }>
+    | undefined;
+  const primeraFoto = Array.isArray(fotos)
+    ? fotos[0]?.thumbnails?.large?.url ?? fotos[0]?.url ?? null
+    : null;
 
   return {
     id: record.id,
@@ -132,6 +141,10 @@ function mapearRegistro(record: AirtableRecord): Auto {
     precioPorDia: typeof precio === "number" ? precio : null,
     requisitos: typeof requisitos === "string" ? requisitos.trim() : "",
     fechaDevolucion: typeof fechaDevolucion === "string" ? fechaDevolucion : null,
+    anio: typeof anio === "number" ? anio : null,
+    caja: typeof caja === "string" ? caja : "",
+    traccion: typeof traccion === "string" ? traccion : "",
+    fotoUrl: primeraFoto,
   };
 }
 
@@ -251,6 +264,9 @@ function mapearClienteRecord(record: AirtableRecord): Cliente {
   const fechaContacto = getCampo(f, "Fecha de contacto");
   const ultimaActualizacion = getCampo(f, "Última actualización de estado");
   const conversacion = getCampo(f, "Conversación");
+  const fechaRetiro = getCampo(f, "Fecha de retiro");
+  const horaRetiro = getCampo(f, "Hora de retiro");
+  const ultimaReserva = getCampo(f, "Última actualización de reserva");
 
   return {
     id: record.id,
@@ -264,6 +280,9 @@ function mapearClienteRecord(record: AirtableRecord): Cliente {
       typeof ultimaActualizacion === "string" ? ultimaActualizacion : null,
     conversacion: typeof conversacion === "string" ? conversacion : "",
     pausado: getCampo(f, "Pausado") === true,
+    fechaRetiro: typeof fechaRetiro === "string" ? fechaRetiro : null,
+    horaRetiro: typeof horaRetiro === "string" && horaRetiro.trim() ? horaRetiro.trim() : null,
+    ultimaActualizacionReserva: typeof ultimaReserva === "string" ? ultimaReserva : null,
   };
 }
 

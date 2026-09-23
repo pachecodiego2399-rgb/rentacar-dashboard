@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Barlow_Condensed } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import { clientConfig } from "@/config/client";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const barlowCondensed = Barlow_Condensed({
+const sora = Sora({
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["600", "700"],
   variable: "--font-display",
 });
 
 export const metadata: Metadata = {
   title: `${clientConfig.businessName} — Dashboard`,
-  description: `Panel de control de flota para ${clientConfig.businessName}.`,
+  description: `Panel del agente de WhatsApp de ${clientConfig.businessName}.`,
 };
 
 export default function RootLayout({
@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${barlowCondensed.variable}`}>
+    <html lang="es" className={`${inter.variable} ${sora.variable}`}>
       <body
         className="min-h-screen bg-[#F5F2EA] font-sans text-stone-900 antialiased"
         style={

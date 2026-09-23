@@ -8,6 +8,11 @@ export interface Auto {
   precioPorDia: number | null;
   requisitos: string;
   fechaDevolucion: string | null;
+  anio: number | null;
+  caja: string;
+  traccion: string;
+  /** URL de la primera foto del auto (Airtable), null si no tiene */
+  fotoUrl: string | null;
 }
 
 export interface AutosPorEstado {
@@ -53,8 +58,14 @@ export interface Cliente {
   ultimaActualizacion: string | null;
   /** Historial de mensajes en texto plano, tal como lo guarda el bot */
   conversacion: string;
-  /** true = el bot está pausado y Salvador responde manualmente */
+  /** true = el agente está pausado y el dueño responde manualmente */
   pausado: boolean;
+  /** Fecha de retiro acordada (AAAA-MM-DD) */
+  fechaRetiro: string | null;
+  /** Hora de retiro acordada (HH:mm) */
+  horaRetiro: string | null;
+  /** Timestamp ISO del último cambio de Estado, Fecha u Hora de retiro */
+  ultimaActualizacionReserva: string | null;
 }
 
 export interface ResumenClientes {
