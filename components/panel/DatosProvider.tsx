@@ -38,11 +38,16 @@ async function pedir<T>(url: string, init?: RequestInit): Promise<T> {
   for (let intento = 0; ; intento++) {
     try {
       const res = await fetch(url, { cache: "no-store", ...init });
+      if (res.status === 401) {
+        // Sesión vencida o cerrada en otro lado: de vuelta al login.
+        window.location.href = `/login?volver=${encodeURIComponent(location.pathname + location.search)}`;
+        throw new Error("Sesión expirada");
+      }
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `Error ${res.status}`);
       return body as T;
     } catch (e) {
-      if (intento >= 1) throw e;
+      if (intento >= 1 || (e instanceof Error && e.message === "Sesión expirada")) throw e;
       await new Promise((r) => setTimeout(r, 700));
     }
   }

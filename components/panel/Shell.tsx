@@ -179,6 +179,17 @@ function Sidebar() {
             <div className="truncate text-[13px] font-medium text-n-fg">{clientConfig.ownerName}</div>
             <div className="text-[12px] text-n-faint">{clientConfig.ownerRole}</div>
           </div>
+          <button
+            onClick={async () => {
+              await fetch("/api/logout", { method: "POST" }).catch(() => {});
+              window.location.href = "/login";
+            }}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="rounded-lg p-1.5 text-n-faint transition hover:bg-n-card hover:text-n-fg"
+          >
+            <Icono nombre="salir" className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="relative">
