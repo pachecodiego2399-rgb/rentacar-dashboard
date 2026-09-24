@@ -51,14 +51,18 @@ function Conversaciones() {
   const idSel = params.get("c");
   const seleccionado = clientes.find((c) => c.id === idSel) ?? lista[0] ?? null;
   const elegir = (c: Cliente) => router.replace(`/conversaciones?c=${c.id}`, { scroll: false });
+  // En el celular se ve una cosa a la vez (como WhatsApp): la lista, o el chat
+  // abierto. En pantallas más grandes, todo lado a lado.
+  const enChat = !!idSel && !!seleccionado;
 
   return (
     <div className="flex flex-col gap-5">
       <Encabezado titulo="Conversaciones" bajada="Todo lo que se habló por WhatsApp, y lo que se sabe de cada cliente." />
 
-      <div className="grid overflow-hidden rounded-2xl border border-n-line bg-n-card/60 lg:h-[calc(100vh-210px)] lg:min-h-[600px] lg:grid-cols-[290px_1fr] 2xl:grid-cols-[310px_1fr_320px]">
+      {/* Ventana fija: la página no se mueve, solo se desplaza el chat (y la lista) por dentro */}
+      <div className="grid h-[calc(100dvh-196px)] min-h-[440px] grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-n-line bg-n-card/60 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)_290px]">
         {/* Lista */}
-        <aside className="flex min-h-0 flex-col border-b border-n-line lg:border-b-0 lg:border-r">
+        <aside className={`${enChat ? "hidden lg:flex" : "flex"} min-h-0 flex-col lg:border-r lg:border-n-line`}>
           <div className="flex flex-col gap-2 border-b border-n-line p-3">
             <label className="flex items-center gap-2 rounded-lg border border-n-line bg-n-bg/50 px-3 py-2 text-n-faint focus-within:border-n-acc/60">
               <Icono nombre="buscar" className="h-4 w-4" />
@@ -89,7 +93,7 @@ function Conversaciones() {
               ))}
             </div>
           </div>
-          <div className="max-h-[320px] min-h-0 flex-1 overflow-y-auto lg:max-h-none">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && <div className="m-3 h-20 animate-pulse rounded-xl bg-n-card" />}
             {!cargando && lista.length === 0 && <div className="p-3"><Vacio>Sin conversaciones.</Vacio></div>}
             {lista.map((c) => {
@@ -124,11 +128,21 @@ function Conversaciones() {
         </aside>
 
         {/* Chat */}
-        {seleccionado ? <Chat cliente={seleccionado} onFicha={() => setVerFicha(true)} /> : <div className="flex items-center justify-center p-10 text-n-faint">Elige una conversación</div>}
+        <div className={`${enChat ? "flex" : "hidden lg:flex"} min-h-0 min-w-0`}>
+          {seleccionado ? (
+            <Chat
+              cliente={seleccionado}
+              onFicha={() => setVerFicha(true)}
+              onVolver={() => router.replace("/conversaciones", { scroll: false })}
+            />
+          ) : (
+            <div className="flex flex-1 items-center justify-center p-10 text-n-faint">Elige una conversación</div>
+          )}
+        </div>
 
-        {/* Ficha */}
+        {/* Ficha, al lado del chat en pantallas de computador */}
         {seleccionado && (
-          <div className="hidden min-h-0 border-l border-n-line 2xl:flex">
+          <div className="hidden min-h-0 border-l border-n-line xl:flex">
             <Ficha cliente={seleccionado} />
           </div>
         )}
@@ -136,7 +150,7 @@ function Conversaciones() {
 
       {/* En pantallas de notebook la ficha se abre como panel lateral */}
       {seleccionado && verFicha && (
-        <div className="fixed inset-0 z-40 2xl:hidden">
+        <div className="fixed inset-0 z-40 xl:hidden">
           <button aria-label="Cerrar ficha" onClick={() => setVerFicha(false)} className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-y-0 right-0 flex w-[min(360px,100%)] flex-col border-l border-n-line2 bg-n-side shadow-2xl">
             <div className="flex items-center justify-between border-b border-n-line px-5 py-3">
@@ -153,7 +167,7 @@ function Conversaciones() {
   );
 }
 
-function Chat({ cliente, onFicha }: { cliente: Cliente; onFicha: () => void }) {
+function Chat({ cliente, onFicha, onVolver }: { cliente: Cliente; onFicha: () => void; onVolver: () => void }) {
   const { cambiarPausado, enviarMensaje } = useDatos();
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -187,36 +201,43 @@ function Chat({ cliente, onFicha }: { cliente: Cliente; onFicha: () => void }) {
   let diaAnterior = "";
 
   return (
-    <section className="flex min-h-[520px] min-w-0 flex-col lg:min-h-0">
-      <header className="flex flex-wrap items-center gap-3 border-b border-n-line px-4 py-3 sm:flex-nowrap sm:px-5">
-        <Avatar texto={iniciales(cliente.nombre)} color={COLOR_ESTADO_CLIENTE[cliente.estado]} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[15px] font-semibold text-n-fg">{cliente.nombre}</span>
-            <PillCliente estado={cliente.estado} />
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex flex-col gap-2.5 border-b border-n-line px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <button onClick={onVolver} aria-label="Volver a la lista" className="-ml-1 rounded-lg p-1 text-n-muted hover:text-n-fg lg:hidden">
+            <Icono nombre="chevronIzq" className="h-5 w-5" />
+          </button>
+          <Avatar texto={iniciales(cliente.nombre)} color={COLOR_ESTADO_CLIENTE[cliente.estado]} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold text-n-fg">{cliente.nombre}</div>
+            <div className="whitespace-nowrap text-[12.5px] tabular-nums text-n-faint">{formatearTelefono(cliente.telefono)}</div>
           </div>
-          <div className="mt-0.5 whitespace-nowrap text-[12.5px] tabular-nums text-n-faint">{formatearTelefono(cliente.telefono)}</div>
         </div>
-        <button
-          onClick={onFicha}
-          className="shrink-0 rounded-lg border border-n-line2 px-3 py-2 text-[13px] text-n-muted transition hover:text-n-fg 2xl:hidden"
-        >
-          Ficha
-        </button>
-        <button
-          onClick={alternarControl}
-          disabled={cambiando}
-          className={`flex-1 shrink-0 rounded-lg border px-3.5 py-2 text-[13px] font-medium transition disabled:opacity-60 sm:flex-none ${
-            cliente.pausado
-              ? "border-n-acc/50 bg-n-acc/15 text-n-fg hover:bg-n-acc/25"
-              : "border-n-line2 bg-n-card2 text-n-fg hover:border-n-warn/50"
-          }`}
-        >
-          {cambiando ? "Guardando…" : cliente.pausado ? "Devolver al agente" : "Tomar el control"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <PillCliente estado={cliente.estado} />
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={onFicha}
+              className="rounded-lg border border-n-line2 px-3 py-1.5 text-[13px] text-n-muted transition hover:text-n-fg xl:hidden"
+            >
+              Ficha
+            </button>
+            <button
+              onClick={alternarControl}
+              disabled={cambiando}
+              className={`rounded-lg border px-3.5 py-1.5 text-[13px] font-medium transition disabled:opacity-60 ${
+                cliente.pausado
+                  ? "border-n-acc/50 bg-n-acc/15 text-n-fg hover:bg-n-acc/25"
+                  : "border-n-line2 bg-n-card2 text-n-fg hover:border-n-warn/50"
+              }`}
+            >
+              {cambiando ? "Guardando…" : cliente.pausado ? "Devolver al agente" : "Tomar el control"}
+            </button>
+          </div>
+        </div>
       </header>
 
-      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
         {mensajes.length === 0 ? (
           <Vacio>Todavía no hay mensajes con este cliente.</Vacio>
         ) : (
