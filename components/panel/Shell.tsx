@@ -80,7 +80,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {aviso && (
         <div
           role="status"
-          className={`fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-xl border px-4 py-2.5 text-[13px] font-medium shadow-2xl ${
+          className={`fixed left-1/2 top-[calc(env(safe-area-inset-top,0px)+68px)] z-50 w-max max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-xl border px-4 py-2.5 text-center text-[13px] font-medium shadow-2xl ${
             aviso.tipo === "error"
               ? "border-n-bad/40 bg-[#2a1216] text-n-bad"
               : "border-n-ok/30 bg-[#0e2320] text-n-ok"
