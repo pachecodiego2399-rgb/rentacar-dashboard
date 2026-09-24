@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 /**
- * Webhook de n8n (workflow "1.- Real bot Rentacar Sierra Nevada - WhatsApp"),
- * nodo "Webhook Pausa Manual") que marca al cliente como Pausado, agrega el
- * mensaje a la Conversación y lo envía por WhatsApp. Ese workflow todavía no
- * está activo (falta conectar la cuenta real de WhatsApp Business) — esta
- * ruta queda lista para cuando se active.
+ * Webhook de n8n (agente de WhatsApp, nodo "Webhook Pausa Manual") que marca
+ * al cliente como Pausado, agrega el mensaje a la Conversación y lo envía por
+ * WhatsApp. Cada llamada lleva la clave N8N_WEBHOOK_SECRET en el encabezado
+ * "x-panel-secret": n8n rechaza cualquier llamada que no la traiga, así solo
+ * este panel puede mandar mensajes a nombre del negocio.
  */
 const PAUSA_MANUAL_WEBHOOK_URL =
   "https://diegocesarpacheco23.app.n8n.cloud/webhook/pausa-manual-whatsapp";
@@ -34,7 +34,10 @@ export async function POST(request: Request) {
   try {
     const res = await fetch(PAUSA_MANUAL_WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-panel-secret": process.env.N8N_WEBHOOK_SECRET ?? "",
+      },
       body: JSON.stringify({ telefono, mensaje }),
       cache: "no-store",
     });
