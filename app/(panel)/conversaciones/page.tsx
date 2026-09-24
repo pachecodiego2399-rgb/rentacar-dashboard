@@ -86,7 +86,7 @@ function Conversaciones() {
                 <button
                   key={id}
                   onClick={() => setFiltro(id)}
-                  className={`rounded-md px-2.5 py-1 text-[12.5px] transition ${filtro === id ? "bg-n-hover text-n-fg" : "text-n-muted hover:text-n-fg"}`}
+                  className={`whitespace-nowrap rounded-md px-2 py-1 text-[12.5px] transition ${filtro === id ? "bg-n-hover text-n-fg" : "text-n-muted hover:text-n-fg"}`}
                 >
                   {label}
                 </button>
