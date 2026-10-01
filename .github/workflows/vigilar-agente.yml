@@ -1,0 +1,60 @@
+# Alarma externa del agente de WhatsApp.
+# Corre en GitHub (no depende de n8n ni de ningún computador). Si algo falla,
+# la ejecución queda en rojo y GitHub manda un correo al dueño del repositorio.
+#
+# - Cada 30 min: n8n está en línea (no gasta ejecuciones de n8n).
+# - Cada 6 h: el agente está publicado y su conexión con Airtable funciona
+#   (gasta 1 ejecución de n8n por chequeo, ~120 al mes).
+#   Requiere el secreto N8N_WEBHOOK_SECRET en el repositorio
+#   (Settings → Secrets and variables → Actions). Sin él, solo revisa que el
+#   agente esté publicado.
+name: Vigilar agente
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      N8N: https://diegocesarpacheco23.app.n8n.cloud
+    steps:
+      - name: n8n en línea
+        run: |
+          for i in 1 2 3; do
+            r=$(curl -s -m 20 "$N8N/healthz" || true)
+            echo "intento $i: $r"
+            echo "$r" | grep -q '"ok"' && exit 0
+            sleep 20
+          done
+          echo "::error::n8n no responde (posible caída o suscripción suspendida)"
+          exit 1
+
+      - name: Agente publicado y Airtable conectado (cada 6 h o a mano)
+        env:
+          CLAVE: ${{ secrets.N8N_WEBHOOK_SECRET }}
+        run: |
+          HORA=$(date -u +%H); MIN=$(date -u +%M)
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            case "$HORA" in 00|06|12|18) ;; *) echo "Chequeo profundo solo cada 6 h"; exit 0;; esac
+            [ "$MIN" -ge 30 ] && { echo "Chequeo profundo solo en la primera media hora"; exit 0; }
+          fi
+          URL="$N8N/webhook/pausa-manual-whatsapp"
+          if [ -n "$CLAVE" ]; then
+            # Teléfono que no existe: si el agente y Airtable funcionan, responde 404 "cliente no encontrado".
+            code=$(curl -s -m 30 -o r.txt -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+              -H "x-panel-secret: $CLAVE" -d '{"telefono":"56900000000","mensaje":"chequeo"}' "$URL")
+            cat r.txt; echo " -> $code"
+            [ "$code" = "404" ] && exit 0
+            echo "::error::El agente o su conexión con Airtable fallan (respuesta $code)"
+            exit 1
+          else
+            code=$(curl -s -m 30 -o r.txt -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$URL")
+            cat r.txt; echo " -> $code"
+            [ "$code" = "401" ] && exit 0
+            echo "::error::El agente no está publicado (respuesta $code)"
+            exit 1
+          fi
